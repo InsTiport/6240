@@ -12,10 +12,7 @@ def uniquify(a):
     for row in a:
         unique_tuples.add(tuple(row))
 
-    unique_tuples = list(unique_tuples)
-    unique_tuples = [list(t) for t in unique_tuples]
-
-    return np.array(unique_tuples)
+    return np.array(list(unique_tuples))
 
 
 # read train and test data
