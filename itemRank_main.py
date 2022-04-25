@@ -88,7 +88,7 @@ for split in range(5):
         DOAs.append(doa)
 
         Lu = item_rank.calculate_Lu(user_name)
-        predicted_interested_subreddits = item_rank.get_most_similar_in_d(d, Lu, len(Tu))
+        predicted_interested_subreddits = item_rank.get_most_similar(IR, Lu, len(Tu))
 
         num_matched = count_matched(Tu, predicted_interested_subreddits)
         macro_avg_accuracy.append(num_matched / len(Tu))

@@ -85,16 +85,16 @@ class ItemRank(object):
     #        [_, 2, 0.3]
     #        [_, 3, 0.1]
     #        [_, 1, 0.4]
-    # d = [0.3, 0.2, 0.1, 0.4]
-    # arg_sorted_d = [2, 1, 0, 3]
+    # IR = [0.3, 0.2, 0.1, 0.4]
+    # arg_sorted_IR = [2, 1, 0, 3]
     # top_4 = [1, 2, 0, 3]
-    def get_most_similar_in_d(self, d, exclude_idx, top_k):
+    def get_most_similar(self, IR, exclude_idx, top_k):
         top_k_list = []
-        arg_sorted_d = np.argsort(d)
+        arg_sorted_IR = np.argsort(IR)
 
-        idx = len(d) - 1
+        idx = len(IR) - 1
         while len(top_k_list) < top_k:
-            item_id = self.movie_names[arg_sorted_d[idx]]
+            item_id = self.movie_names[arg_sorted_IR[idx]]
             if item_id not in exclude_idx:
                 top_k_list.append(item_id)
 
