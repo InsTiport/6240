@@ -4,8 +4,7 @@ Credit: adapted from https://github.com/arashkhoeini/itemrank
 
 from __future__ import division
 import numpy as np
-import warnings
-warnings.filterwarnings("error")
+
 
 class Node(object):
     """
@@ -35,8 +34,8 @@ class ItemRank(object):
     # generates bipartial user/item graph.
     def generate_graph(self):
         node = Node()
-        self.movie_names = list(set(self.all_data[:,1]))
-        self.user_names = list(set(self.all_data[:,0]))
+        self.movie_names = list(set(self.all_data[:, 1]))
+        self.user_names = list(set(self.all_data[:, 0]))
         self.movie_nodes = {}
         self.user_nodes = {}
         for movie in self.movie_names:
@@ -49,9 +48,9 @@ class ItemRank(object):
             node.name = user
             self.user_nodes[user] = node
         print(f'There are {len(self.user_names)} users.')
-        for i in range(len(self.data[:,0])):
-            self.user_nodes[self.data[i,0]].neighbours.append(self.movie_nodes[self.data[i,1]])
-            self.movie_nodes[self.data[i,1]].neighbours.append(self.user_nodes[self.data[i,0]])
+        for i in range(len(self.data[:, 0])):
+            self.user_nodes[self.data[i, 0]].neighbours.append(self.movie_nodes[self.data[i, 1]])
+            self.movie_nodes[self.data[i, 1]].neighbours.append(self.user_nodes[self.data[i, 0]])
 
     def generate_coef_from_graph(self):
         correlation_matrix = np.zeros((len(self.movie_names), len(self.movie_names)))
@@ -76,10 +75,32 @@ class ItemRank(object):
     # generates d, which is a vector of user rates to all movies
     def generate_d(self, user_name):
         d = np.zeros(len(self.movie_names))
-        for i in range(len(self.data[:,0])):
-            if self.data[i,0] == user_name:
-                d[self.movie_names.index(self.data[i,1])] = self.data[i,2]
+        for i in range(len(self.data[:, 0])):
+            if self.data[i, 0] == user_name:
+                d[self.movie_names.index(self.data[i, 1])] = self.data[i, 2]
         return d
+
+    # self.movie_names = [2, 0, 3, 1]
+    # data = [_, 0, 0.2]
+    #        [_, 2, 0.3]
+    #        [_, 3, 0.1]
+    #        [_, 1, 0.4]
+    # d = [0.3, 0.2, 0.1, 0.4]
+    # arg_sorted_d = [2, 1, 0, 3]
+    # top_4 = [1, 2, 0, 3]
+    def get_most_similar_in_d(self, d, exclude_idx, top_k):
+        top_k_list = []
+        arg_sorted_d = np.argsort(d)
+
+        idx = len(d) - 1
+        while len(top_k_list) < top_k:
+            item_id = self.movie_names[arg_sorted_d[idx]]
+            if item_id not in exclude_idx:
+                top_k_list.append(item_id)
+
+            idx -= 1
+
+        return top_k_list
 
     def calculate_DOA(self, np_test_data, user_name, IR):
         Tu = self.calculate_Tu(np_test_data, user_name)
@@ -92,22 +113,29 @@ class ItemRank(object):
 
     def calculate_NW_for_user(self, np_test_data, user_name):
         NW = set()
-        all_data = np.concatenate((self.data, np_test_data), axis = 0)
+        all_data = np.concatenate((self.data, np_test_data), axis=0)
         user_rated_movies = []
-        for i in range(len(all_data[:,0])):
-            if all_data[i,0] == user_name:
-                user_rated_movies.append(all_data[i,1])
-        for j in range(len(all_data[:,0])):
-            if all_data[j,1] not in user_rated_movies:
-                NW.add(all_data[j,1])
+        for i in range(len(all_data[:, 0])):
+            if all_data[i, 0] == user_name:
+                user_rated_movies.append(all_data[i, 1])
+        for j in range(len(all_data[:, 0])):
+            if all_data[j, 1] not in user_rated_movies:
+                NW.add(all_data[j, 1])
         return list(NW)
 
     def calculate_Tu(self, np_test_data, user_name):
         Tu = set()
-        for i in range(len(np_test_data[:,0])):
-            if np_test_data[i,0] == user_name:
-                Tu.add(np_test_data[i,1])
+        for i in range(len(np_test_data[:, 0])):
+            if np_test_data[i, 0] == user_name:
+                Tu.add(np_test_data[i, 1])
         return list(Tu)
+
+    def calculate_Lu(self, user_name):
+        Lu = set()
+        for i in range(len(self.data[:, 0])):
+            if self.data[i, 0] == user_name:
+                Lu.add(self.data[i, 1])
+        return list(Lu)
 
     def check_order(self, IR, j, k):
         try:

@@ -15,6 +15,10 @@ def uniquify(a):
     return np.array(list(unique_tuples))
 
 
+def count_matched(l1, l2):
+    return len(set(l1) & set(l2))
+
+
 # read train and test data
 user_subreddit_rating = dict()
 with open('user_subreddit.tsv', 'r') as r:
@@ -63,6 +67,8 @@ for split in range(5):
     item_rank.generate_coef_from_graph()
     DOAs = []
 
+    macro_avg_accuracy = []
+    micro_avg_num, micro_avg_den = 0, 0
     for user_name in tqdm.tqdm(range(10000)):
         Tu = item_rank.calculate_Tu(np_test_data, user_name)
         if len(Tu) == 0:
@@ -80,5 +86,16 @@ for split in range(5):
         # print(f'Converged after {str(counter)} counts.')
         doa = item_rank.calculate_DOA(np_test_data, user_name, IR)
         DOAs.append(doa)
+
+        Lu = item_rank.calculate_Lu(user_name)
+        predicted_interested_subreddits = item_rank.get_most_similar_in_d(d, Lu, len(Tu))
+
+        num_matched = count_matched(Tu, predicted_interested_subreddits)
+        macro_avg_accuracy.append(num_matched / len(Tu))
+        micro_avg_num += num_matched
+        micro_avg_den += len(Tu)
+
         # print(f'DOA for user {user_name} is : {doa}')
-    print(f'Macro DOA for split {split} is: {sum(DOAs) / len(DOAs)}\n')
+    print(f'Macro DOA for split {split} is: {sum(DOAs) / len(DOAs)}')
+    print(f'Macro average accuracy for split {split} is {np.mean(macro_avg_accuracy)}')
+    print(f'Micro average accuracy for split {split} is {micro_avg_num / micro_avg_den}\n')
