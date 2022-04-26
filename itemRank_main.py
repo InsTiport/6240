@@ -19,6 +19,10 @@ def count_matched(l1, l2):
     return len(set(l1) & set(l2))
 
 
+def count_matched_recall(predicted, actual):
+    return len([e for e in actual if e in predicted])
+
+
 # read train and test data
 user_subreddit_rating = dict()
 with open('user_subreddit.tsv', 'r') as r:
@@ -49,7 +53,7 @@ all_data = np.array(all_data_list)
 unique_all_data = uniquify(all_data)
 
 print('Training and evaluating...\n')
-for split in range(5):
+for split in range(1):
     print(f'Split {split}:')
     with open(f'split_{split}.txt', 'r') as r:
         training_idx = np.array(r.readline().split(','), dtype=int)
@@ -58,22 +62,51 @@ for split in range(5):
     np_data = all_data[training_idx]
     np_test_data = all_data[test_idx]
 
-    np_data = uniquify(np_data)
-    np_test_data = uniquify(np_test_data)
+    unique_np_data = uniquify(np_data)
+    unique_np_test_data = uniquify(np_test_data)
 
     # training and testing the model
-    item_rank = ItemRank(np_data, unique_all_data)
+    item_rank = ItemRank(unique_np_data, unique_all_data)
     item_rank.generate_graph()
     item_rank.generate_coef_from_graph()
     DOAs = []
 
-    macro_avg_accuracy = []
-    micro_avg_num, micro_avg_den = 0, 0
+    # macro_avg_accuracy_1 = []
+    # macro_avg_accuracy_5 = []
+    # macro_avg_accuracy_10 = []
+    macro_avg_recall_1 = []
+    macro_avg_recall_5 = []
+    macro_avg_recall_10 = []
+
+    # test_macro_avg_accuracy_1 = []
+    # test_macro_avg_accuracy_5 = []
+    # test_macro_avg_accuracy_10 = []
+    test_macro_avg_recall_1 = []
+    test_macro_avg_recall_5 = []
+    test_macro_avg_recall_10 = []
+
+    rounds = []
     for user_name in tqdm.tqdm(range(10000)):
-        Tu = item_rank.calculate_Tu(np_test_data, user_name)
-        if len(Tu) == 0:
+        Tu_not_unique = []
+        for i in range(len(np_test_data[:, 0])):
+            if np_test_data[i, 0] == user_name:
+                Tu_not_unique.append(np_test_data[i, 1])
+        if len(Tu_not_unique) <= 10:
             continue
+        Lu_not_unique = []
+        for i in range(len(np_data[:, 0])):
+            if np_data[i, 0] == user_name:
+                Lu_not_unique.append(np_data[i, 1])
+        if len(Lu_not_unique) <= 10:
+            continue
+
+        Tu = item_rank.calculate_Tu(unique_np_test_data, user_name)
+        Lu = item_rank.calculate_Lu(user_name)
+
         d = item_rank.generate_d(user_name=user_name)
+        # d = d = np.zeros(len(item_rank.movie_names))
+        # d[:] = 1 / len(item_rank.movie_names)
+
         IR = np.ones(len(item_rank.movie_names))
         old_IR = IR
         converged = False
@@ -84,18 +117,51 @@ for split in range(5):
             IR = item_rank.item_rank(0.85, IR, d)
             converged = (old_IR - IR < 0.0001).all()
         # print(f'Converged after {str(counter)} counts.')
-        doa = item_rank.calculate_DOA(np_test_data, user_name, IR)
+        rounds.append(counter)
+        doa = item_rank.calculate_DOA(unique_np_test_data, user_name, IR)
         DOAs.append(doa)
 
-        Lu = item_rank.calculate_Lu(user_name)
-        predicted_interested_subreddits = item_rank.get_most_similar(IR, Lu, len(Tu))
+        predicted_interested_subreddits_1 = item_rank.get_most_similar(IR, [], 1)
+        predicted_interested_subreddits_5 = item_rank.get_most_similar(IR, [], 5)
+        predicted_interested_subreddits_10 = item_rank.get_most_similar(IR, [], 10)
 
-        num_matched = count_matched(Tu, predicted_interested_subreddits)
-        macro_avg_accuracy.append(num_matched / len(Tu))
-        micro_avg_num += num_matched
-        micro_avg_den += len(Tu)
+        # num_matched_1 = count_matched(Tu, predicted_interested_subreddits_1)
+        # num_matched_5 = count_matched(Tu, predicted_interested_subreddits_5)
+        # num_matched_10 = count_matched(Tu, predicted_interested_subreddits_10)
+        macro_avg_recall_1.append(count_matched_recall(predicted_interested_subreddits_1, Lu_not_unique)
+                                  / len(Lu_not_unique))
+        macro_avg_recall_5.append(count_matched_recall(predicted_interested_subreddits_5, Lu_not_unique)
+                                  / len(Lu_not_unique))
+        macro_avg_recall_10.append(count_matched_recall(predicted_interested_subreddits_10, Lu_not_unique)
+                                   / len(Lu_not_unique))
+        # macro_avg_accuracy_1.append(num_matched_1 / 1)
+        # macro_avg_accuracy_5.append(num_matched_5 / 5)
+        # macro_avg_accuracy_10.append(num_matched_10 / 10)
+
+        # num_matched_1 = count_matched(Lu, predicted_interested_subreddits_1)
+        # num_matched_5 = count_matched(Lu, predicted_interested_subreddits_5)
+        # num_matched_10 = count_matched(Lu, predicted_interested_subreddits_10)
+        test_macro_avg_recall_1.append(count_matched_recall(predicted_interested_subreddits_1, Tu_not_unique)
+                                       / len(Tu_not_unique))
+        test_macro_avg_recall_5.append(count_matched_recall(predicted_interested_subreddits_5, Tu_not_unique)
+                                       / len(Tu_not_unique))
+        test_macro_avg_recall_10.append(count_matched_recall(predicted_interested_subreddits_10, Tu_not_unique)
+                                        / len(Tu_not_unique))
+        # macro_avg_accuracy_1.append(num_matched_1 / 1)
+        # macro_avg_accuracy_5.append(num_matched_5 / 5)
+        # macro_avg_accuracy_10.append(num_matched_10 / 10)
 
         # print(f'DOA for user {user_name} is : {doa}')
     print(f'Macro DOA for split {split} is: {sum(DOAs) / len(DOAs)}')
-    print(f'Macro average accuracy for split {split} is {np.mean(macro_avg_accuracy)}')
-    print(f'Micro average accuracy for split {split} is {micro_avg_num / micro_avg_den}\n')
+    print(f'Converses on average after {np.mean(rounds)} rounds')
+    # print(f'Macro average accuracy@1 for split {split} is {np.mean(macro_avg_accuracy_1)}')
+    print(f'Macro average recall@1 for the train set of split {split} is {np.mean(macro_avg_recall_1)}')
+    print(f'Macro average recall@1 for the test set of split {split} is {np.mean(test_macro_avg_recall_1)}')
+
+    # print(f'Macro average accuracy@5 for split {split} is {np.mean(macro_avg_accuracy_5)}')
+    print(f'Macro average recall@5 for the train set of split {split} is {np.mean(macro_avg_recall_5)}')
+    print(f'Macro average recall@5 for the test set of split {split} is {np.mean(test_macro_avg_recall_5)}')
+
+    # print(f'Macro average accuracy@10 for split {split} is {np.mean(macro_avg_accuracy_10)}')
+    print(f'Macro average recall@10 for the train set of split {split} is {np.mean(macro_avg_recall_10)}')
+    print(f'Macro average recall@10 for the test set of split {split} is {np.mean(test_macro_avg_recall_10)}\n')
