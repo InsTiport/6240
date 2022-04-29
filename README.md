@@ -1,3 +1,8 @@
 # 6240
 
-Run `statistics.py` to generate processed data (tsv files). You must have the original file `reddit.csv` in the root directory.
+First, download the [Reddit data](http://snap.stanford.edu/jodie/reddit.csv) to the root directory.
+
+## ItemRank
+Run `statistics.py` to generate processed data (tsv files). Then run `itemRank_main.py` to train and evaluate on the test dataset.
+
+## HGRU4Rec
