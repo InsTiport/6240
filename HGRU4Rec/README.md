@@ -1,17 +1,17 @@
 # Environment setting and Data Acquisition
 
-```bash
+```sh
 ./setup.sh
 ```
 
 # Train
 
-```bash
+```sh
 ./train.sh data/prepared/full_train_embed.hdf data/prepared/test_embed.hdf ckpt
 ```
 
 # Test
-```bash
+```sh
 python hgru4rec_test.py --train ./data/prepared/full_train_embed.hdf --test ./data/prepared/test_embed.hdf --ckpt ckpt/ckpt-embedding-valid --metrics recall
 ```
 
